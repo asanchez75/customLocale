@@ -20,14 +20,22 @@ class CustomLocalePlugin extends GenericPlugin {
 	 */
 	function register($category, $path, $mainContextId = null) {
 		if (parent::register($category, $path, $mainContextId)) {
-			if ($this->getEnabled()) {
+			if ($this->getEnabled($mainContextId)) {
+				$this->import('CustomLocalePlugin');
+
+				// Ensure that there is a context (journal or press)
+				if ($request = Application::getRequest()) {
+
+					if ($mainContextId) {
+						$contextId = $mainContextId;
+					} else {
+						$context = $request->getContext();
+						$contextId = $context ? $context->getId() : CONTEXT_SITE;
+					}
 
 				// Add custom locale data for already registered locale files.
 				$locale = AppLocale::getLocale();
 				$localeFiles = AppLocale::getLocaleFiles($locale);
-
-				$context = Request::getContext();
-				$contextId = $context->getId();
 
 				$publicFilesDir = Config::getVar('files', 'public_files_dir');
 				$customLocalePathBase = "$publicFilesDir/presses/$contextId/" . CUSTOM_LOCALE_DIR . "/$locale/";
@@ -40,6 +48,8 @@ class CustomLocalePlugin extends GenericPlugin {
 						AppLocale::registerLocaleFile($locale, $customLocalePath, false);
 					}
 				}
+
+			}
 
 				// Add custom locale data for all locale files registered after this plugin
 				HookRegistry::register('PKPLocale::registerLocaleFile', array(&$this, 'addCustomLocale'));
@@ -136,9 +146,15 @@ class CustomLocalePlugin extends GenericPlugin {
 	function addCustomLocale($hookName, $args) {
 		$locale =& $args[0];
 		$localeFilename =& $args[1];
-		$request =& Registry::get('request');
-		$context = $request->getContext();
-		$contextId = $context->getId();
+		if ($request = Application::getRequest()) {
+			if ($mainContextId) {
+				$contextId = $mainContextId;
+			} else {
+				$context = $request->getContext();
+				$contextId = $context ? $context->getId() : CONTEXT_SITE;
+			}
+		}
+
 
 		$publicFilesDir = Config::getVar('files', 'public_files_dir');
 		$customLocalePath = "$publicFilesDir/presses/$contextId/" . CUSTOM_LOCALE_DIR . "/$locale/$localeFilename";
